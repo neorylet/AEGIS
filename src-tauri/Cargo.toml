@@ -1,0 +1,55 @@
+[package]
+name = "aegis"
+version = "0.1.0"
+description = "Advanced Enterprise-grade Guardian & Intrusion System"
+authors = ["AEGIS Team"]
+license = "MIT"
+repository = "https://github.com/your-org/AEGIS"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+tauri = { version = "1.5", features = [ "shell-open"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.4", features = ["v4", "serde"] }
+log = "0.4"
+env_logger = "0.10"
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono"] }
+tokio = { version = "1.32", features = ["full"] }
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Network dependencies
+pnet = "0.33"
+etherparse = "0.13"
+
+# ML dependencies (optional)
+ndarray = { version = "0.15", optional = true }
+linfa = { version = "0.7", optional = true }
+
+# HTTP client for integrations
+reqwest = { version = "0.11", features = ["json"] }
+
+# Configuration
+config = "0.13"
+
+[features]
+# This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
+custom-protocol = ["tauri/custom-protocol"]
+ml = ["ndarray", "linfa"]
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
