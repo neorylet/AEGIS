@@ -1,0 +1,10 @@
+C:\Users\neory_6no4pg4\OneDrive\Desktop\AEGIS\src-tauri\target_new\debug\deps\version_check-cf9ebed475c70bc5.d: C:\Users\neory_6no4pg4\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\lib.rs C:\Users\neory_6no4pg4\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\version.rs C:\Users\neory_6no4pg4\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\channel.rs C:\Users\neory_6no4pg4\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\date.rs
+
+C:\Users\neory_6no4pg4\OneDrive\Desktop\AEGIS\src-tauri\target_new\debug\deps\libversion_check-cf9ebed475c70bc5.rlib: C:\Users\neory_6no4pg4\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\lib.rs C:\Users\neory_6no4pg4\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\version.rs C:\Users\neory_6no4pg4\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\channel.rs C:\Users\neory_6no4pg4\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\date.rs
+
+C:\Users\neory_6no4pg4\OneDrive\Desktop\AEGIS\src-tauri\target_new\debug\deps\libversion_check-cf9ebed475c70bc5.rmeta: C:\Users\neory_6no4pg4\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\lib.rs C:\Users\neory_6no4pg4\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\version.rs C:\Users\neory_6no4pg4\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\channel.rs C:\Users\neory_6no4pg4\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\date.rs
+
+C:\Users\neory_6no4pg4\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\lib.rs:
+C:\Users\neory_6no4pg4\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\version.rs:
+C:\Users\neory_6no4pg4\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\channel.rs:
+C:\Users\neory_6no4pg4\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\date.rs:

@@ -3,7 +3,7 @@
 pub struct TimelineBuilder {
     events: Vec<TimelineEvent>,
 }
-
+#[derive(Debug, Clone)]
 pub struct TimelineEvent {
     pub id: String,
     pub timestamp: chrono::DateTime<chrono::Utc>,

@@ -3,7 +3,7 @@
 pub struct IncidentManager {
     incidents: Vec<Incident>,
 }
-
+#[derive(Debug, Clone)]
 pub struct Incident {
     pub id: String,
     pub title: String,

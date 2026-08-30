@@ -24,6 +24,7 @@ pub enum AssetType {
     Other(String),
 }
 
+#[derive(Debug, Clone)]
 pub enum CriticalityLevel {
     Low,
     Medium,
