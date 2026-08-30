@@ -1,5 +1,7 @@
 // Hunting query validator
 
+use super::parser::HuntingQuery;
+
 pub struct HuntingQueryValidator;
 
 impl HuntingQueryValidator {

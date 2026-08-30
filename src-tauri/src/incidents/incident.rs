@@ -17,6 +17,7 @@ pub struct Incident {
     pub tags: Vec<String>,
 }
 
+#[derive(Debug, Clone)]
 pub enum IncidentSeverity {
     Low,
     Medium,
@@ -24,6 +25,7 @@ pub enum IncidentSeverity {
     Critical,
 }
 
+#[derive(Debug, Clone)]
 pub enum IncidentStatus {
     Open,
     InProgress,

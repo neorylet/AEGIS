@@ -18,18 +18,21 @@ impl HuntingQueryParser {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct HuntingQuery {
     pub filters: Vec<QueryFilter>,
     pub time_range: Option<(chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>)>,
     pub limit: usize,
 }
 
+#[derive(Debug, Clone)]
 pub struct QueryFilter {
     pub field: String,
     pub operator: FilterOperator,
     pub value: String,
 }
 
+#[derive(Debug, Clone)]
 pub enum FilterOperator {
     Equals,
     NotEquals,

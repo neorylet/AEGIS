@@ -19,7 +19,7 @@ impl FeatureExtractor {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct PacketFeatures {
     pub size: usize,
     pub protocol: String,
@@ -27,7 +27,7 @@ pub struct PacketFeatures {
     pub payload_size: usize,
 }
 
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct FlowFeatures {
     pub duration: chrono::Duration,
     pub packet_count: usize,
@@ -36,7 +36,7 @@ pub struct FlowFeatures {
     pub inter_arrival_times: Vec<chrono::Duration>,
 }
 
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct TemporalFeatures {
     pub frequency: f64,
     pub periodicity: f64,

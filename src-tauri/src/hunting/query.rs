@@ -1,5 +1,7 @@
 // Hunting query execution engine
 
+use super::parser::HuntingQuery;
+
 pub struct HuntingQueryEngine {
     data_sources: Vec<DataSource>,
 }

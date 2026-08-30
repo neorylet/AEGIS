@@ -1,5 +1,7 @@
 // Anomaly detection based on fingerprinting
 
+use super::features::{PacketFeatures, FlowFeatures};
+
 pub struct AnomalyDetector {
     threshold: f64,
 }

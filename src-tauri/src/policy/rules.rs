@@ -1,5 +1,37 @@
 // Policy rule engine
 
+#[derive(Debug, Clone)]
+pub struct PolicyRule {
+    pub id: String,
+    pub name: String,
+    pub conditions: Vec<String>,
+}
+
+impl Default for PolicyRule {
+    fn default() -> Self {
+        Self {
+            id: String::new(),
+            name: String::new(),
+            conditions: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PolicyAction {
+    pub action_type: String,
+    pub parameters: std::collections::HashMap<String, String>,
+}
+
+impl Default for PolicyAction {
+    fn default() -> Self {
+        Self {
+            action_type: String::new(),
+            parameters: std::collections::HashMap::new(),
+        }
+    }
+}
+
 pub struct PolicyRuleEngine {
     rules: Vec<PolicyRule>,
 }
