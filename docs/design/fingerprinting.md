@@ -1,5 +1,11 @@
 # Fingerprinting Design
 
+**STATUS**: RECONCILED - Fingerprinting design reflects PLANNED architecture, not current implementation
+
+**IMPORTANT**: This document describes the PLANNED fingerprinting approach. No fingerprinting logic is currently implemented. See [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md) for actual implementation status.
+
+---
+
 This document describes the network fingerprinting approach in AEGIS.
 
 ## Overview

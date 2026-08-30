@@ -1,5 +1,11 @@
 # Correlation Design
 
+**STATUS**: RECONCILED - Correlation design reflects PLANNED architecture, not current implementation
+
+**IMPORTANT**: This document describes the PLANNED correlation strategies. No correlation logic is currently implemented. See [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md) for actual implementation status.
+
+---
+
 This document describes the event correlation strategies in AEGIS.
 
 ## Overview

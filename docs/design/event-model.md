@@ -1,5 +1,11 @@
 # Event Model
 
+**STATUS**: RECONCILED - Event model reflects PLANNED design, not current implementation
+
+**IMPORTANT**: This document describes the PLANNED event model. Basic event structs exist in code, but no event processing or normalization is implemented. See [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md) for actual implementation status.
+
+---
+
 This document describes the event model used in AEGIS.
 
 ## Event Structure

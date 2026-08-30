@@ -5,7 +5,10 @@ Welcome to the AEGIS documentation. This directory contains comprehensive docume
 ## Authoritative Documents
 
 - **[AEGIS_CANONICAL_SPECIFICATION.md](AEGIS_CANONICAL_SPECIFICATION.md)** - Authoritative system specification (START HERE)
+- **[AEGIS_MASTER_DOCUMENT.md](AEGIS_MASTER_DOCUMENT.md)** - Project overview and module structure
 - **[OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)** - Unresolved architectural questions requiring decisions
+- **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)** - Actual implementation status of all modules
+- **[AUDIT_REPORT.md](AUDIT_REPORT.md)** - Full documentation and implementation audit
 
 ## Documentation Structure
 

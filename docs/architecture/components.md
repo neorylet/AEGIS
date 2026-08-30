@@ -1,5 +1,11 @@
 # Components
 
+**STATUS**: RECONCILED - Component descriptions reflect PLANNED architecture, not current implementation
+
+**IMPORTANT**: This document describes the PLANNED component architecture. All components currently exist as skeleton code only. No functional capabilities are implemented. See [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md) for actual implementation status.
+
+---
+
 This document provides detailed descriptions of AEGIS components.
 
 ## Sensor Component
@@ -7,11 +13,14 @@ This document provides detailed descriptions of AEGIS components.
 ### Purpose
 Capture and analyze network traffic in real-time.
 
+### Implementation Status
+**SKELETON** - Module exists with struct definitions only. No actual packet capture implemented.
+
 ### Sub-components
-- **Packet Capture**: Raw packet capture using libpcap
-- **Protocol Decoder**: Decode network protocols (Ethernet, IP, TCP, UDP, etc.)
-- **Flow Manager**: Track network flows and connections
-- **Interface Manager**: Manage network interfaces
+- **Packet Capture**: Raw packet capture (STATUS: TBD - capture technology not selected)
+- **Protocol Decoder**: Decode network protocols (STATUS: TBD)
+- **Flow Manager**: Track network flows and connections (STATUS: TBD)
+- **Interface Manager**: Manage network interfaces (STATUS: TBD)
 
 ### Key Features
 - High-performance packet capture
@@ -24,10 +33,13 @@ Capture and analyze network traffic in real-time.
 ### Purpose
 Discover and fingerprint network devices.
 
+### Implementation Status
+**SKELETON** - Module exists with struct definitions only. No actual discovery implemented.
+
 ### Sub-components
-- **Device Discovery**: Scan network for devices
-- **ARP Scanner**: ARP-based device discovery
-- **Device Fingerprinter**: Identify device types and OS
+- **Device Discovery**: Scan network for devices (STATUS: TBD)
+- **ARP Scanner**: ARP-based device discovery (STATUS: TBD)
+- **Device Fingerprinter**: Identify device types and OS (STATUS: TBD)
 
 ### Key Features
 - Automated network scanning
@@ -89,11 +101,16 @@ Create and maintain network fingerprints.
 ### Purpose
 Integrate external threat intelligence.
 
+### Implementation Status
+**SKELETON** - Integration modules exist with TODO comments only. No actual API calls implemented.
+
+**Note**: External threat intelligence providers are NOT mandatory. These are optional integrations.
+
 ### Sub-components
-- **Threat Intel Manager**: Manage threat intel sources
-- **Reputation Service**: Check IP/domain reputation
-- **IOC Manager**: Manage indicators of compromise
-- **MITRE Mapper**: Map to MITRE ATT&CK
+- **Threat Intel Manager**: Manage threat intel sources (STATUS: TBD)
+- **Reputation Service**: Check IP/domain reputation (STATUS: TBD)
+- **IOC Manager**: Manage indicators of compromise (STATUS: TBD)
+- **MITRE Mapper**: Map to MITRE ATT&CK (STATUS: TBD - ATT&CK integration not approved)
 
 ### Key Features
 - Multiple intel sources
@@ -155,12 +172,17 @@ Assess and score security risks.
 ### Purpose
 Execute automated response actions.
 
+### Implementation Status
+**SKELETON** - Module exists with struct definitions only. No response actions implemented.
+
+**Note**: Endpoint-level response capabilities (process killing, file quarantine) are NOT assumed unless explicit endpoint architecture is approved.
+
 ### Sub-components
-- **Response Executor**: Execute response actions
-- **Firewall Manager**: Manage firewall rules
-- **Isolation Manager**: Isolate compromised devices
-- **Response Verifier**: Verify response effectiveness
-- **Rollback Manager**: Rollback failed responses
+- **Response Executor**: Execute response actions (STATUS: TBD)
+- **Firewall Manager**: Manage firewall rules (STATUS: TBD - requires platform-specific implementation)
+- **Isolation Manager**: Isolate compromised devices (STATUS: TBD - requires platform-specific implementation)
+- **Response Verifier**: Verify response effectiveness (STATUS: TBD)
+- **Rollback Manager**: Rollback failed responses (STATUS: TBD)
 
 ### Key Features
 - Automated response execution
@@ -190,11 +212,16 @@ Define and execute response playbooks.
 ### Purpose
 Machine learning for anomaly detection.
 
+### Implementation Status
+**OPTIONAL - SKELETON** - ML is an optional feature flag. No ML models implemented.
+
+**Note**: ML is NOT the definition of AEGIS. ML output should be treated as evidence or signal within the broader analytical pipeline.
+
 ### Sub-components
-- **ML Inference Engine**: Run ML models
-- **ML Feature Extractor**: Extract ML features
-- **ML Models**: Trained model storage
-- **Model Version Manager**: Manage model versions
+- **ML Inference Engine**: Run ML models (STATUS: TBD - specific models not selected)
+- **ML Feature Extractor**: Extract ML features (STATUS: TBD)
+- **ML Models**: Trained model storage (STATUS: TBD)
+- **Model Version Manager**: Manage model versions (STATUS: TBD)
 
 ### Key Features
 - Model inference
@@ -238,12 +265,17 @@ Threat hunting capabilities.
 ### Purpose
 Integrate with external services.
 
+### Implementation Status
+**SKELETON** - All integration clients are skeleton implementations with TODO comments. No actual API calls implemented.
+
+**Note**: These integrations are OPTIONAL. External threat intelligence providers are NOT mandatory.
+
 ### Sub-components
-- **VirusTotal**: VirusTotal API integration
-- **AbuseIPDB**: AbuseIPDB API integration
-- **MISP**: MISP integration
-- **Slack**: Slack notification integration
-- **Discord**: Discord notification integration
+- **VirusTotal**: VirusTotal API integration (STATUS: SKELETON - TODO only)
+- **AbuseIPDB**: AbuseIPDB API integration (STATUS: SKELETON - TODO only)
+- **MISP**: MISP integration (STATUS: SKELETON - TODO only)
+- **Slack**: Slack notification integration (STATUS: SKELETON - TODO only)
+- **Discord**: Discord notification integration (STATUS: SKELETON - TODO only)
 
 ### Key Features
 - API integrations

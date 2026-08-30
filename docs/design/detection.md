@@ -1,5 +1,11 @@
 # Detection Design
 
+**STATUS**: RECONCILED - Detection design reflects PLANNED architecture, not current implementation
+
+**IMPORTANT**: This document describes the PLANNED detection engine. No detection logic is currently implemented. See [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md) for actual implementation status.
+
+---
+
 This document describes the detection engine design in AEGIS.
 
 ## Detection Overview
