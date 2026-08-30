@@ -1,6 +1,7 @@
 # AEGIS
 
-Advanced Enterprise-grade Guardian & Intrusion System
+
+Active Defense & Granular Intelligence System
 
 AEGIS is a comprehensive network security monitoring and threat detection system designed for enterprise environments. It provides real-time network traffic analysis, behavioral anomaly detection, and automated incident response capabilities.
 
