@@ -5,7 +5,6 @@ pub mod decoder;
 pub mod flow;
 pub mod interface;
 
-use capture::PacketCapture;
 use decoder::PacketDecoder;
 use flow::FlowManager;
 use interface::NetworkInterface;
