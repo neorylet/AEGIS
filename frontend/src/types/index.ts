@@ -1,4 +1,4 @@
-export type EventStatus = 'Info' | 'Warning' | 'Critical' | 'Resolved';
+export type EventStatus = 'Info' | 'Warning' | 'Critical' | 'Resolved' | 'Network';
 
 export type SecurityEvent = 
   | { Process: ProcessEvent }

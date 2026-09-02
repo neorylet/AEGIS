@@ -36,17 +36,20 @@ function App(): JSX.Element {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] flex font-sans text-[#1a1a2e]">
+    <div className="flex h-screen overflow-hidden bg-[#f8f9fa] font-sans text-[#1a1a2e]">
+      {/* Sidebar – fixed width, no scrolling itself (unless many items) */}
       <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
-      <div className="flex-1 flex flex-col">
-        <header className="h-16 bg-white border-b border-[#dee2e6] flex items-center justify-between px-6">
+
+      {/* Main content area – scrollable independently */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="h-16 bg-white border-b border-[#dee2e6] flex items-center justify-between px-6 flex-shrink-0">
           <h1 className="text-lg font-semibold text-[#0055a4]">AEGIS Security System</h1>
           <div className="flex items-center gap-4 text-sm text-[#6c757d]">
             <span>Status: Active</span>
             <span>Device: Local</span>
           </div>
         </header>
-        <main className="flex-1 p-6">
+        <main className="flex-1 overflow-y-auto p-6">
           {renderContent()}
         </main>
       </div>

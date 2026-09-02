@@ -8,11 +8,16 @@ export const Dashboard = () => {
   const [recentEvents, setRecentEvents] = useState<EnrichedEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
+  // Calculate stat cards from real data
+  const activeDevices = new Set(recentEvents.map(e => e.asset_id)).size;
+  const processCount = recentEvents.filter(e => 'Process' in e.event).length;
+  const networkCount = recentEvents.filter(e => 'Network' in e.event).length;
+
   const statCards: StatCard[] = [
-    { label: 'Active Devices', value: 0, trend: 'neutral' },
+    { label: 'Active Devices', value: activeDevices || (recentEvents.length > 0 ? 1 : 0), trend: 'neutral' },
     { label: 'Recent Events', value: recentEvents.length, trend: 'up', trendValue: 12 },
-    { label: 'Open Alerts', value: 0, trend: 'neutral' },
-    { label: 'Open Incidents', value: 0, trend: 'neutral' },
+    { label: 'Process Events', value: processCount, trend: 'neutral' },
+    { label: 'Network Events', value: networkCount, trend: 'neutral' },
   ];
 
   const handleStartMonitoring = async (): Promise<void> => {
@@ -50,6 +55,8 @@ export const Dashboard = () => {
         return 'bg-[#0dcaf0] text-white';
       case 'Resolved':
         return 'bg-[#198754] text-white';
+      case 'Network':
+        return 'bg-[#6f42c1] text-white';
       default:
         return 'bg-[#6c757d] text-white';
     }
@@ -59,6 +66,24 @@ export const Dashboard = () => {
     if ('Process' in event.event) return 'Process';
     if ('Network' in event.event) return 'Network';
     return 'Unknown';
+  };
+
+  const getEventStatus = (event: EnrichedEvent): EventStatus => {
+    if ('Process' in event.event) return 'Info';
+    if ('Network' in event.event) return 'Network' as EventStatus;
+    return 'Info';
+  };
+
+  const renderEventDetails = (event: EnrichedEvent): string => {
+    if ('Process' in event.event) {
+      const data = event.event.Process;
+      return `PID: ${data.pid} | ${data.name} | CPU: ${data.cpu_usage.toFixed(1)}% | Mem: ${(data.memory_usage / 1024 / 1024).toFixed(1)}MB`;
+    }
+    if ('Network' in event.event) {
+      const data = event.event.Network;
+      return `${data.protocol} | ${data.local_ip}:${data.local_port} → ${data.remote_ip}:${data.remote_port}`;
+    }
+    return 'N/A';
   };
 
   const renderTrendArrow = (trend: 'up' | 'down' | 'neutral', value?: number): JSX.Element => {
@@ -198,10 +223,10 @@ export const Dashboard = () => {
                   <td className="px-4 py-3 text-sm text-[#495057] font-mono">{event.timestamp}</td>
                   <td className="px-4 py-3 text-sm text-[#1a1a2e]">{event.source}</td>
                   <td className="px-4 py-3 text-sm text-[#495057]">{getEventType(event)}</td>
-                  <td className="px-4 py-3 text-sm text-[#495057]">{event.details || 'N/A'}</td>
+                  <td className="px-4 py-3 text-sm text-[#495057] font-mono">{renderEventDetails(event)}</td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-sm text-xs font-medium ${getStatusColor(event.status || 'Info')}`}>
-                      {event.status || 'Info'}
+                    <span className={`px-2 py-1 rounded-sm text-xs font-medium ${getStatusColor(getEventStatus(event))}`}>
+                      {getEventStatus(event)}
                     </span>
                   </td>
                 </tr>
