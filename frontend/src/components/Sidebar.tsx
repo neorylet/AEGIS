@@ -1,4 +1,4 @@
-import React from 'react';
+import { LayoutDashboard, Server, FileText, AlertTriangle, FolderOpen, FileText as Policy, Search, Settings } from 'lucide-react';
 
 interface SidebarProps {
   activeSection: string;
@@ -6,38 +6,42 @@ interface SidebarProps {
 }
 
 const sections = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'devices', label: 'Devices' },
-  { id: 'events', label: 'Events' },
-  { id: 'alerts', label: 'Alerts' },
-  { id: 'incidents', label: 'Incidents' },
-  { id: 'policies', label: 'Policies' },
-  { id: 'hunting', label: 'Hunting' },
-  { id: 'settings', label: 'Settings' },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'devices', label: 'Devices', icon: Server },
+  { id: 'events', label: 'Events', icon: FileText },
+  { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
+  { id: 'incidents', label: 'Incidents', icon: FolderOpen },
+  { id: 'policies', label: 'Policies', icon: Policy },
+  { id: 'hunting', label: 'Hunting', icon: Search },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => {
+export const Sidebar = ({ activeSection, onSectionChange }: SidebarProps) => {
   return (
-    <div className="w-64 bg-gray-800 min-h-screen p-4">
-      <div className="mb-8">
-        <h1 className="text-xl font-bold text-white">AEGIS</h1>
-        <p className="text-gray-400 text-sm">Security System</p>
+    <aside className="w-[200px] bg-[#e9ecef] flex flex-col border-r border-[#dee2e6]">
+      <div className="p-4 border-b border-[#dee2e6]">
+        <h1 className="text-xl font-bold text-[#0055a4]">AEGIS</h1>
+        <p className="text-sm text-[#6c757d]">Security System</p>
       </div>
-      <nav className="space-y-2">
-        {sections.map((section) => (
-          <button
-            key={section.id}
-            onClick={() => onSectionChange(section.id)}
-            className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-              activeSection === section.id
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-300 hover:bg-gray-700'
-            }`}
-          >
-            {section.label}
-          </button>
-        ))}
+      <nav className="flex-1 p-2 space-y-1">
+        {sections.map((section) => {
+          const Icon = section.icon;
+          return (
+            <button
+              key={section.id}
+              onClick={() => onSectionChange(section.id)}
+              className={`w-full text-left px-3 py-2 rounded-sm text-sm font-medium transition-colors flex items-center gap-2 ${
+                activeSection === section.id
+                  ? 'bg-[#0055a4] text-white'
+                  : 'text-[#495057] hover:bg-[#dee2e6]'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {section.label}
+            </button>
+          );
+        })}
       </nav>
-    </div>
+    </aside>
   );
 };

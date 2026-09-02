@@ -1,12 +1,12 @@
-import React from 'react';
+import { FileText } from 'lucide-react';
+import { PlaceholderPage } from '../components/PlaceholderPage';
 
-export const Events: React.FC = () => {
+export const Events = () => {
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">Events</h2>
-      <div className="bg-gray-800 rounded-lg p-12 text-center">
-        <p className="text-gray-400 text-lg">Coming soon</p>
-      </div>
-    </div>
+    <PlaceholderPage
+      title="Events"
+      description="View and analyze security events"
+      icon={FileText}
+    />
   );
 };

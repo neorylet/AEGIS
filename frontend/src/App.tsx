@@ -9,10 +9,10 @@ import { Policies } from './pages/Policies';
 import { Hunting } from './pages/Hunting';
 import { Settings } from './pages/Settings';
 
-function App() {
-  const [activeSection, setActiveSection] = useState('dashboard');
+function App(): JSX.Element {
+  const [activeSection, setActiveSection] = useState<string>('dashboard');
 
-  const renderContent = () => {
+  const renderContent = (): JSX.Element => {
     switch (activeSection) {
       case 'dashboard':
         return <Dashboard />;
@@ -36,10 +36,19 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex">
+    <div className="min-h-screen bg-[#f8f9fa] flex font-sans text-[#1a1a2e]">
       <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
-      <div className="flex-1">
-        {renderContent()}
+      <div className="flex-1 flex flex-col">
+        <header className="h-16 bg-white border-b border-[#dee2e6] flex items-center justify-between px-6">
+          <h1 className="text-lg font-semibold text-[#0055a4]">AEGIS Security System</h1>
+          <div className="flex items-center gap-4 text-sm text-[#6c757d]">
+            <span>Status: Active</span>
+            <span>Device: Local</span>
+          </div>
+        </header>
+        <main className="flex-1 p-6">
+          {renderContent()}
+        </main>
       </div>
     </div>
   );

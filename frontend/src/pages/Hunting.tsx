@@ -1,12 +1,12 @@
-import React from 'react';
+import { Search } from 'lucide-react';
+import { PlaceholderPage } from '../components/PlaceholderPage';
 
-export const Hunting: React.FC = () => {
+export const Hunting = () => {
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">Hunting</h2>
-      <div className="bg-gray-800 rounded-lg p-12 text-center">
-        <p className="text-gray-400 text-lg">Coming soon</p>
-      </div>
-    </div>
+    <PlaceholderPage
+      title="Hunting"
+      description="Threat hunting and investigation tools"
+      icon={Search}
+    />
   );
 };

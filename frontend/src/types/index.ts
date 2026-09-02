@@ -1,9 +1,17 @@
+export type EventStatus = 'Info' | 'Warning' | 'Critical' | 'Resolved';
+
+export type SecurityEvent = 
+  | { Process: ProcessEvent }
+  | { Network: NetworkEvent };
+
 export interface EnrichedEvent {
   id?: number;
   timestamp: string;
   source: string;
   asset_id?: string;
-  event: ProcessEvent | NetworkEvent;
+  event: SecurityEvent;
+  status?: EventStatus;
+  details?: string;
 }
 
 export interface ProcessEvent {
@@ -20,4 +28,11 @@ export interface NetworkEvent {
   remote_ip: string;
   remote_port: number;
   protocol: string;
+}
+
+export interface StatCard {
+  label: string;
+  value: number;
+  trend: 'up' | 'down' | 'neutral';
+  trendValue?: number;
 }

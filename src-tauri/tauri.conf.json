@@ -1,7 +1,7 @@
 {
   "build": {
     "distDir": "../frontend/dist",
-    "devPath": "http://localhost:3000",
+    "devPath": "http://localhost:5173",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
   },
@@ -36,7 +36,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' http://localhost:3000 ws://localhost:3000; img-src 'self' https://picsum.photos"
+      "csp": "default-src 'self'; connect-src 'self' http://localhost:5173 ws://localhost:5173; img-src 'self' https://picsum.photos"
     }
   }
 }
