@@ -21,7 +21,10 @@ mod config;
 mod commands;
 
 // ---- IMPORTS ----
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use commands::AppState;
+use storage::DatabaseManager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -32,10 +35,32 @@ pub fn run() {
         let _ = std::io::stdin().read_line(&mut String::new());
     }));
 
-    println!("🔹 AEGIS starting (no database mode)");
+    // ---- Database path with absolute path ----
+    let exe_dir = std::env::current_exe()
+        .expect("failed to get executable path")
+        .parent()
+        .expect("failed to get parent directory")
+        .to_path_buf();
 
-    // ---- Empty AppState ----
-    let app_state = AppState {};
+    let db_path = exe_dir.join("aegis.db")
+        .to_str()
+        .expect("invalid Unicode in path")
+        .to_string();
+
+    println!("📁 Database path: {}", db_path);
+
+    // ---- Initialize database ----
+    let db = Arc::new(
+        tauri::async_runtime::block_on(
+            DatabaseManager::new(&format!("sqlite:{}", db_path))
+        )
+        .expect("Failed to initialize database")
+    );
+
+    let app_state = AppState {
+        db,
+        is_monitoring: AtomicBool::new(false),
+    };
 
     // ---- Launch Tauri ----
     tauri::Builder::default()

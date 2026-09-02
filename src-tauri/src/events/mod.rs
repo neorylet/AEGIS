@@ -30,7 +30,6 @@ pub struct NetworkEvent {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", content = "data")]
 pub enum SecurityEvent {
     Process(ProcessEvent),
     Network(NetworkEvent),

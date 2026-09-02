@@ -1,15 +1,12 @@
-// Storage module
-pub mod database;
-pub mod migrations;
-pub mod repositories;
-pub mod models;
-
-use sqlx::SqlitePool;
+use sqlx::sqlite::{SqlitePool, SqlitePoolOptions, SqliteConnectOptions};
 use sqlx::Row;
 use chrono::{DateTime, Utc};
 use serde_json;
 use crate::events::{EnrichedEvent, SecurityEvent};
 use anyhow::Result;
+use log::info;
+use std::str::FromStr;
+use std::path::Path;
 
 pub struct DatabaseManager {
     pool: SqlitePool,
@@ -17,8 +14,24 @@ pub struct DatabaseManager {
 
 impl DatabaseManager {
     pub async fn new(database_url: &str) -> Result<Self, sqlx::Error> {
-        let pool = SqlitePool::connect(database_url).await?;
+        info!("Connecting to database: {}", database_url);
+
+        let path_str = database_url.trim_start_matches("sqlite:");
+        if let Some(parent) = Path::new(path_str).parent() {
+            std::fs::create_dir_all(parent).map_err(sqlx::Error::Io)?;
+        }
+
+        let options = SqliteConnectOptions::from_str(database_url)?
+            .create_if_missing(true);
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(options)
+            .await?;
+
+        info!("Database connected, initializing tables...");
         Self::initialize_tables(&pool).await?;
+        info!("Tables initialized successfully");
         Ok(Self { pool })
     }
 
@@ -104,14 +117,6 @@ impl DatabaseManager {
         }
 
         Ok(results)
-    }
-
-    pub async fn migrate(&self) -> Result<(), sqlx::Error> {
-        Ok(())
-    }
-
-    pub fn pool(&self) -> &SqlitePool {
-        &self.pool
     }
 
     pub async fn health_check(&self) -> Result<(), String> {

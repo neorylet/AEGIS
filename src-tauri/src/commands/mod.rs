@@ -1,16 +1,30 @@
 use tauri::State;
-use serde_json::json;
-use chrono::Utc;
-use crate::events::{EnrichedEvent, SecurityEvent, ProcessEvent};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use tokio::spawn;
+use crate::storage::DatabaseManager;
+use crate::sensor::capture::{poll_processes, poll_connections};
+use crate::events::EnrichedEvent;
 
-// ---- App state (empty) ----
-pub struct AppState {}
-
-// ---- Stubbed Tauri commands ----
+pub struct AppState {
+    pub db: Arc<DatabaseManager>,
+    pub is_monitoring: AtomicBool,
+}
 
 #[tauri::command]
 pub async fn start_monitoring(state: State<'_, AppState>) -> Result<(), String> {
-    println!("▶️ Start monitoring called (stubbed)");
+    if state.is_monitoring.swap(true, Ordering::SeqCst) {
+        log::warn!("start_monitoring called while already running — ignoring");
+        return Ok(());
+    }
+    let db = state.db.clone();
+    spawn(async move {
+        poll_processes(db.clone()).await;
+    });
+    let db2 = state.db.clone();
+    spawn(async move {
+        poll_connections(db2).await;
+    });
     Ok(())
 }
 
@@ -19,30 +33,9 @@ pub async fn get_recent_events(
     state: State<'_, AppState>,
     limit: usize,
 ) -> Result<Vec<EnrichedEvent>, String> {
-    println!("🔍 get_recent_events called (stubbed)");
-    // Return dummy process data
-    let dummy_events: Vec<EnrichedEvent> = (0..std::cmp::min(limit, 5))
-        .map(|i| {
-            let process = ProcessEvent {
-                pid: 1000 + i as u32,
-                name: format!("dummy_process_{}.exe", i),
-                parent_pid: Some(1),
-                cpu_usage: (i as f32) * 2.5,
-                memory_usage: (i as u64) * 1024 * 1024,
-            };
-            EnrichedEvent {
-                id: Some(i as i64),
-                timestamp: Utc::now(),
-                source: "dummy".to_string(),
-                asset_id: Some("asset-1".to_string()),
-                event: SecurityEvent::Process(process),
-            }
-        })
-        .collect();
-    Ok(dummy_events)
+    state.db.get_recent_events(limit).await.map_err(|e| e.to_string())
 }
 
-// ---- Other sub-commands (stubs) ----
 pub mod devices;
 pub mod traffic;
 pub mod alerts;
