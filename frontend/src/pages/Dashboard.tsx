@@ -1,39 +1,43 @@
 import { useState, useEffect } from 'react';
-import { Play, RefreshCw, Filter, Download } from 'lucide-react';
+import { Play, Square, RefreshCw, Filter, Download } from 'lucide-react';
 import { commands } from '../services/tauri';
 import { EnrichedEvent, EventStatus, StatCard } from '../types';
 
 export const Dashboard = () => {
   const [isMonitoring, setIsMonitoring] = useState<boolean>(false);
-  const [recentEvents, setRecentEvents] = useState<EnrichedEvent[]>([]);
+  const [rawEvents, setRawEvents] = useState<EnrichedEvent[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<EnrichedEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
-  // Calculate stat cards from real data
-  const activeDevices = new Set(recentEvents.map(e => e.asset_id)).size;
-  const processCount = recentEvents.filter(e => 'Process' in e.event).length;
-  const networkCount = recentEvents.filter(e => 'Network' in e.event).length;
-
-  const statCards: StatCard[] = [
-    { label: 'Active Devices', value: activeDevices || (recentEvents.length > 0 ? 1 : 0), trend: 'neutral' },
-    { label: 'Recent Events', value: recentEvents.length, trend: 'up', trendValue: 12 },
-    { label: 'Process Events', value: processCount, trend: 'neutral' },
-    { label: 'Network Events', value: networkCount, trend: 'neutral' },
-  ];
-
-  const handleStartMonitoring = async (): Promise<void> => {
-    try {
-      await commands.startMonitoring();
-      setIsMonitoring(true);
-    } catch (error) {
-      console.error('Failed to start monitoring:', error);
+  // ---- Helpers ----
+  const isLoopback = (event: EnrichedEvent): boolean => {
+    if ('Network' in event.event) {
+      const data = event.event.Network;
+      const local = data.local_ip;
+      const remote = data.remote_ip;
+      return (
+        local.startsWith('127.') ||
+        remote.startsWith('127.') ||
+        local === '0.0.0.0' ||
+        remote === '0.0.0.0' ||
+        local === '[::]' ||
+        remote === '[::]' ||
+        local === '::1' ||
+        remote === '::1'
+      );
     }
+    return false;
   };
 
+  // ---- Load events ----
   const loadEvents = async (): Promise<void> => {
     setLoading(true);
     try {
-      const events = await commands.getRecentEvents(10);
-      setRecentEvents(events);
+      const events = await commands.getRecentEvents(100); // fetch 100 for better stats
+      setRawEvents(events);
+      // Filter for display
+      const filtered = events.filter(e => !isLoopback(e));
+      setFilteredEvents(filtered);
     } catch (error) {
       console.error('Failed to load events:', error);
     } finally {
@@ -41,24 +45,61 @@ export const Dashboard = () => {
     }
   };
 
+  // ---- Compute stats from raw events ----
+  const activeDevices = new Set(rawEvents.map(e => e.asset_id || 'unknown')).size;
+  const processCount = rawEvents.filter(e => 'Process' in e.event).length;
+  const networkCount = rawEvents.filter(e => 'Network' in e.event).length;
+
+  const statCards: StatCard[] = [
+    { label: 'Active Devices', value: activeDevices > 0 ? activeDevices : 0, trend: 'neutral' },
+    { label: 'Recent Events', value: rawEvents.length, trend: 'up', trendValue: 12 },
+    { label: 'Process Events', value: processCount, trend: 'neutral' },
+    { label: 'Network Events', value: networkCount, trend: 'neutral' },
+  ];
+
+  // ---- Monitoring controls ----
+  const handleStartMonitoring = async (): Promise<void> => {
+    try {
+      await commands.startMonitoring();
+      setIsMonitoring(true);
+      loadEvents();
+    } catch (error) {
+      console.error('Failed to start monitoring:', error);
+    }
+  };
+
+  const handleStopMonitoring = async (): Promise<void> => {
+    try {
+      // TODO: call stop_monitoring backend command when available
+      setIsMonitoring(false);
+      console.warn('Stop monitoring not fully implemented – backend still polls.');
+    } catch (error) {
+      console.error('Failed to stop monitoring:', error);
+    }
+  };
+
+  // ---- Auto-refresh ----
+  useEffect(() => {
+    if (isMonitoring) {
+      const interval = setInterval(loadEvents, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [isMonitoring]);
+
+  // ---- Initial load ----
   useEffect(() => {
     loadEvents();
   }, []);
 
+  // ---- Helpers for table ----
   const getStatusColor = (status: EventStatus): string => {
     switch (status) {
-      case 'Critical':
-        return 'bg-[#dc3545] text-white';
-      case 'Warning':
-        return 'bg-[#ffc107] text-[#1a1a2e]';
-      case 'Info':
-        return 'bg-[#0dcaf0] text-white';
-      case 'Resolved':
-        return 'bg-[#198754] text-white';
-      case 'Network':
-        return 'bg-[#6f42c1] text-white';
-      default:
-        return 'bg-[#6c757d] text-white';
+      case 'Critical': return 'bg-[#dc3545] text-white';
+      case 'Warning':  return 'bg-[#ffc107] text-[#1a1a2e]';
+      case 'Info':     return 'bg-[#0dcaf0] text-white';
+      case 'Resolved': return 'bg-[#198754] text-white';
+      case 'Network':  return 'bg-[#6f42c1] text-white';
+      default:         return 'bg-[#6c757d] text-white';
     }
   };
 
@@ -90,9 +131,10 @@ export const Dashboard = () => {
     if (trend === 'neutral') return <span className="text-[#6c757d]">—</span>;
     const color = trend === 'up' ? 'text-[#198754]' : 'text-[#dc3545]';
     const arrow = trend === 'up' ? '↑' : '↓';
-    return <span className={`${color} text-xs`}>{arrow} {value ? `${value}%` : ''}</span>;
+    return <span className={`${color} text-xs`}>{arrow} ${value ? value + '%' : ''}</span>;
   };
 
+  // ---- Chart (placeholder) ----
   const renderChart = (): JSX.Element => {
     const hours = Array.from({ length: 24 }, (_, i) => i);
     const data = hours.map(() => Math.floor(Math.random() * 50) + 10);
@@ -128,6 +170,15 @@ export const Dashboard = () => {
             <Play className="w-4 h-4" />
             {isMonitoring ? 'Monitoring Active' : 'Start Monitoring'}
           </button>
+          {isMonitoring && (
+            <button
+              onClick={handleStopMonitoring}
+              className="px-4 py-2 rounded-sm text-sm font-medium bg-[#dc3545] text-white hover:bg-[#c82333] transition-colors flex items-center gap-2"
+            >
+              <Square className="w-4 h-4" />
+              Stop Monitoring
+            </button>
+          )}
           <button
             onClick={loadEvents}
             disabled={loading}
@@ -156,7 +207,7 @@ export const Dashboard = () => {
         ))}
       </div>
 
-      {/* Middle Section: Chart + Status Summary */}
+      {/* Middle Section: Chart + Status */}
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-2 bg-white border border-[#dee2e6] rounded-sm p-4 shadow-sm">
           <h3 className="text-sm font-semibold text-[#495057] mb-4">Events Over Last 24 Hours</h3>
@@ -204,35 +255,37 @@ export const Dashboard = () => {
             </button>
           </div>
         </div>
-        {recentEvents.length === 0 ? (
-          <div className="p-8 text-center text-[#6c757d]">No events yet</div>
+        {filteredEvents.length === 0 ? (
+          <div className="p-8 text-center text-[#6c757d]">No events yet (loopback filtered)</div>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-[#dee2e6] bg-[#f8f9fa]">
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#6c757d] uppercase tracking-wider font-mono">Timestamp</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#6c757d] uppercase tracking-wider">Source</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#6c757d] uppercase tracking-wider">Type</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#6c757d] uppercase tracking-wider">Details</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-[#6c757d] uppercase tracking-wider">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentEvents.map((event) => (
-                <tr key={event.id} className="border-b border-[#dee2e6] hover:bg-[#f8f9fa]">
-                  <td className="px-4 py-3 text-sm text-[#495057] font-mono">{event.timestamp}</td>
-                  <td className="px-4 py-3 text-sm text-[#1a1a2e]">{event.source}</td>
-                  <td className="px-4 py-3 text-sm text-[#495057]">{getEventType(event)}</td>
-                  <td className="px-4 py-3 text-sm text-[#495057] font-mono">{renderEventDetails(event)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-sm text-xs font-medium ${getStatusColor(getEventStatus(event))}`}>
-                      {getEventStatus(event)}
-                    </span>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-[#dee2e6] bg-[#f8f9fa]">
+                  <th className="text-left px-4 py-3 text-xs font-medium text-[#6c757d] uppercase tracking-wider font-mono">Timestamp</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-[#6c757d] uppercase tracking-wider">Source</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-[#6c757d] uppercase tracking-wider">Type</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-[#6c757d] uppercase tracking-wider">Details</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-[#6c757d] uppercase tracking-wider">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredEvents.map((event) => (
+                  <tr key={event.id} className="border-b border-[#dee2e6] hover:bg-[#f8f9fa]">
+                    <td className="px-4 py-3 text-sm text-[#495057] font-mono">{event.timestamp}</td>
+                    <td className="px-4 py-3 text-sm text-[#1a1a2e]">{event.source}</td>
+                    <td className="px-4 py-3 text-sm text-[#495057]">{getEventType(event)}</td>
+                    <td className="px-4 py-3 text-sm text-[#495057] font-mono">{renderEventDetails(event)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded-sm text-xs font-medium ${getStatusColor(getEventStatus(event))}`}>
+                        {getEventStatus(event)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
