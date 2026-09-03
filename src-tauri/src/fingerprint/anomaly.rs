@@ -1,7 +1,6 @@
-// Anomaly detection based on fingerprinting
+use super::features::AssetFeatures;
 
-use super::features::{PacketFeatures, FlowFeatures};
-
+#[allow(dead_code)]
 pub struct AnomalyDetector {
     threshold: f64,
 }
@@ -11,13 +10,7 @@ impl AnomalyDetector {
         Self { threshold }
     }
 
-    pub fn detect(&self, current: &PacketFeatures, baseline: &PacketFeatures) -> AnomalyScore {
-        // TODO: Implement anomaly detection
-        AnomalyScore::default()
-    }
-
-    pub fn compare_flows(&self, current: &FlowFeatures, baseline: &FlowFeatures) -> AnomalyScore {
-        // TODO: Implement flow comparison
+    pub fn detect(&self, _current: &AssetFeatures, _baseline: &AssetFeatures) -> AnomalyScore {
         AnomalyScore::default()
     }
 }

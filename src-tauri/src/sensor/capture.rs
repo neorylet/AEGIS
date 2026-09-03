@@ -1,10 +1,15 @@
 use sysinfo::System;
 use crate::events::{ProcessEvent, SecurityEvent, EnrichedEvent, NetworkEvent};
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use std::time::Duration;
 use std::collections::HashSet;
+use chrono::{Utc, Duration as ChronoDuration};
 use crate::storage::DatabaseManager;
-use log::{info, error};
+use crate::discovery::AssetRegistry;
+use crate::fingerprint::{BaselineManager, FeatureExtractor};
+use crate::risk::{AssetAnomaly, run_detection_pipeline, format_anomaly_summary};
+use log::{info, error, warn};
 
 pub async fn poll_processes(db: Arc<DatabaseManager>) {
     let mut sys = System::new_all();
@@ -48,7 +53,6 @@ pub async fn poll_processes(db: Arc<DatabaseManager>) {
     }
 }
 
-// TODO: filter/dedupe after manual data validation
 pub async fn poll_connections(db: Arc<DatabaseManager>) {
     let mut previous_keys: HashSet<String> = HashSet::new();
 
@@ -72,7 +76,6 @@ pub async fn poll_connections(db: Arc<DatabaseManager>) {
         for line in stdout.lines() {
             let line = line.trim();
             
-            // Skip header lines and empty lines
             if line.is_empty() 
                 || line.starts_with("Active Connections") 
                 || line.starts_with("Proto") 
@@ -90,12 +93,10 @@ pub async fn poll_connections(db: Arc<DatabaseManager>) {
             let foreign_address = parts[2];
             let state = if parts.len() > 3 { parts[3].to_string() } else { "".to_string() };
 
-            // Create deduplication key
             let key = format!("{}|{}|{}|{}", protocol, local_address, foreign_address, state);
             current_keys.insert(key.clone());
 
             if !previous_keys.contains(&key) {
-                // Parse local address (split on LAST colon for IPv6 support)
                 let (local_ip, local_port) = if let Some(last_colon) = local_address.rfind(':') {
                     let ip = local_address[..last_colon].to_string();
                     let port = local_address[last_colon + 1..]
@@ -108,7 +109,6 @@ pub async fn poll_connections(db: Arc<DatabaseManager>) {
                     (local_address.to_string(), 0)
                 };
 
-                // Parse foreign address (split on LAST colon for IPv6 support)
                 let (remote_ip, remote_port) = if let Some(last_colon) = foreign_address.rfind(':') {
                     let ip = foreign_address[..last_colon].to_string();
                     let port = foreign_address[last_colon + 1..]
@@ -147,5 +147,101 @@ pub async fn poll_connections(db: Arc<DatabaseManager>) {
         );
 
         previous_keys = current_keys;
+    }
+}
+
+pub async fn run_analysis_loop(
+    db: Arc<DatabaseManager>,
+    asset_registry: Arc<Mutex<AssetRegistry>>,
+    baseline_manager: Arc<Mutex<BaselineManager>>,
+    anomalies_cache: Arc<Mutex<Vec<AssetAnomaly>>>,
+) {
+    let extractor = FeatureExtractor::new();
+    let analysis_interval_secs: i64 = 15;
+    let window_minutes: i64 = 10;
+    let persist_every_n: u64 = 4;
+    let mut tick: u64 = 0;
+
+    loop {
+        tokio::time::sleep(Duration::from_secs(analysis_interval_secs as u64)).await;
+        tick = tick.wrapping_add(1);
+
+        let window_start = Utc::now() - ChronoDuration::minutes(window_minutes);
+        let recent_events = match db.get_events_since(window_start, 2000).await {
+            Ok(e) => e,
+            Err(err) => {
+                error!("Analysis: failed to fetch events: {}", err);
+                continue;
+            }
+        };
+
+        if recent_events.is_empty() {
+            continue;
+        }
+
+        info!(
+            "🔍 Analysis tick #{}: {} events in last {} min window",
+            tick, recent_events.len(), window_minutes
+        );
+
+        let updated_ids = {
+            let mut ar = asset_registry.lock().await;
+            ar.ingest_events(&recent_events)
+        };
+
+        if !updated_ids.is_empty() {
+            let ar_guard = asset_registry.lock().await;
+            for aid in updated_ids.iter().take(100) {
+                if let Some(asset) = ar_guard.get(aid) {
+                    if let Err(e) = db.upsert_asset(asset).await {
+                        error!("Failed to persist asset {}: {}", aid, e);
+                    }
+                }
+            }
+            drop(ar_guard);
+            info!("  → {} assets tracked in registry", updated_ids.len());
+        }
+
+        let features = extractor.extract_per_asset(&recent_events);
+
+        let baselines_snapshot = {
+            let mut bm = baseline_manager.lock().await;
+            bm.ingest_features(&features);
+            bm.all_baselines().iter().map(|b| (*b).clone()).collect::<Vec<_>>()
+        };
+
+        if tick % persist_every_n == 0 {
+            for bl in baselines_snapshot.iter() {
+                if bl.window_count >= 2 {
+                    if let Err(e) = db.save_baseline(bl).await {
+                        error!("Failed to persist baseline {}: {}", bl.asset_id, e);
+                    }
+                }
+            }
+            info!("  → {} baselines persisted to DB ({} total)",
+                baselines_snapshot.iter().filter(|b| b.window_count >= 2).count(),
+                baselines_snapshot.len()
+            );
+        }
+
+        let (_, new_anomalies) = {
+            let bm = baseline_manager.lock().await;
+            run_detection_pipeline(&recent_events, &bm)
+        };
+
+        if !new_anomalies.is_empty() {
+            info!("  ⚠️  {} anomalies detected:", new_anomalies.len());
+            for a in new_anomalies.iter().take(5) {
+                info!("    {}", format_anomaly_summary(a));
+            }
+            if new_anomalies.len() > 5 {
+                info!("    ... and {} more", new_anomalies.len() - 5);
+            }
+
+            let mut cache = anomalies_cache.lock().await;
+            *cache = new_anomalies;
+        } else if tick % 4 == 0 {
+            info!("  → No anomalies detected this tick (behavior within baseline)");
+        }
     }
 }

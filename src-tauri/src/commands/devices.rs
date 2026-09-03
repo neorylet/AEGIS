@@ -1,21 +1,16 @@
-// Device management commands
-
-use crate::discovery::device::DeviceDiscovery;
+use crate::discovery::Asset;
 
 #[tauri::command]
-pub async fn list_devices() -> Result<Vec<crate::discovery::device::DiscoveredDevice>, String> {
-    // TODO: Implement device listing
+pub async fn list_devices() -> Result<Vec<Asset>, String> {
     Ok(vec![])
 }
 
 #[tauri::command]
-pub async fn scan_network(subnet: String) -> Result<usize, String> {
-    // TODO: Implement network scanning
+pub async fn scan_network(_subnet: String) -> Result<usize, String> {
     Ok(0)
 }
 
 #[tauri::command]
-pub async fn get_device_details(device_id: String) -> Result<crate::discovery::device::DiscoveredDevice, String> {
-    // TODO: Implement device details retrieval
+pub async fn get_device_details(_device_id: String) -> Result<Asset, String> {
     Err("Not implemented".to_string())
 }

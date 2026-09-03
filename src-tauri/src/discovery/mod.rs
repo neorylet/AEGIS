@@ -1,9 +1,9 @@
-// Network device discovery module
-
 pub mod device;
 pub mod arp;
 pub mod fingerprint;
 
-use device::DeviceDiscovery;
-use arp::ArpScanner;
-use fingerprint::DeviceFingerprinter;
+pub use device::{
+    Asset, AssetType, AssetRegistry,
+    extract_network_from_event, extract_process_from_event,
+    asset_id_for_network_ip, asset_id_for_process,
+};

@@ -3,8 +3,11 @@ use sqlx::Row;
 use chrono::{DateTime, Utc};
 use serde_json;
 use crate::events::{EnrichedEvent, SecurityEvent};
+use crate::fingerprint::{Baseline, BaselineStats};
+use crate::discovery::Asset;
 use anyhow::Result;
 use log::info;
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::path::Path;
 
@@ -52,8 +55,29 @@ impl DatabaseManager {
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS assets (
                 id TEXT PRIMARY KEY,
+                asset_type TEXT NOT NULL DEFAULT 'device',
+                ip_address TEXT,
+                process_name TEXT,
                 first_seen TEXT NOT NULL,
-                last_seen TEXT NOT NULL
+                last_seen TEXT NOT NULL,
+                event_count INTEGER NOT NULL DEFAULT 0
+            )",
+        )
+        .execute(pool)
+        .await?;
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS baselines (
+                asset_id TEXT NOT NULL,
+                feature_name TEXT NOT NULL,
+                mean REAL NOT NULL,
+                stddev REAL NOT NULL,
+                min REAL NOT NULL,
+                max REAL NOT NULL,
+                sample_count INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                PRIMARY KEY (asset_id, feature_name)
             )",
         )
         .execute(pool)
@@ -119,7 +143,257 @@ impl DatabaseManager {
         Ok(results)
     }
 
+    pub async fn get_events_since(&self, since: DateTime<Utc>, limit: usize) -> Result<Vec<EnrichedEvent>, anyhow::Error> {
+        let rows = sqlx::query(
+            "SELECT id, timestamp, source, asset_id, event_type, event_data
+             FROM events WHERE timestamp >= ?1 ORDER BY timestamp DESC LIMIT ?2"
+        )
+        .bind(since.to_rfc3339())
+        .bind(limit as i64)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut results = Vec::new();
+        for row in rows {
+            let id: i64 = row.get(0);
+            let timestamp_str: String = row.get(1);
+            let timestamp = DateTime::parse_from_rfc3339(&timestamp_str)
+                .unwrap()
+                .with_timezone(&Utc);
+            let source: String = row.get(2);
+            let asset_id: String = row.get(3);
+            let event_data: String = row.get(5);
+            let event: SecurityEvent = serde_json::from_str(&event_data)?;
+            results.push(EnrichedEvent {
+                id: Some(id),
+                timestamp,
+                source,
+                asset_id: Some(asset_id),
+                event,
+            });
+        }
+        Ok(results)
+    }
+
+    pub async fn upsert_asset(&self, asset: &Asset) -> Result<(), anyhow::Error> {
+        let asset_type_str = match asset.asset_type {
+            crate::discovery::AssetType::NetworkEndpoint => "network",
+            crate::discovery::AssetType::Process => "process",
+            crate::discovery::AssetType::Device => "device",
+        };
+        sqlx::query(
+            "INSERT INTO assets (id, asset_type, ip_address, process_name, first_seen, last_seen, event_count)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+             ON CONFLICT(id) DO UPDATE SET
+                asset_type = excluded.asset_type,
+                ip_address = COALESCE(excluded.ip_address, assets.ip_address),
+                process_name = COALESCE(excluded.process_name, assets.process_name),
+                last_seen = excluded.last_seen,
+                event_count = assets.event_count + 1"
+        )
+        .bind(&asset.asset_id)
+        .bind(asset_type_str)
+        .bind(&asset.ip_address)
+        .bind(&asset.process_name)
+        .bind(asset.first_seen.to_rfc3339())
+        .bind(asset.last_seen.to_rfc3339())
+        .bind(asset.event_count as i64)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn upsert_baseline_stats(
+        &self,
+        asset_id: &str,
+        feature_name: &str,
+        stats: &BaselineStats,
+        updated_at: DateTime<Utc>,
+    ) -> Result<(), anyhow::Error> {
+        sqlx::query(
+            "INSERT INTO baselines (asset_id, feature_name, mean, stddev, min, max, sample_count, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
+             ON CONFLICT(asset_id, feature_name) DO UPDATE SET
+                mean = excluded.mean,
+                stddev = excluded.stddev,
+                min = excluded.min,
+                max = excluded.max,
+                sample_count = excluded.sample_count,
+                updated_at = excluded.updated_at"
+        )
+        .bind(asset_id)
+        .bind(feature_name)
+        .bind(stats.mean)
+        .bind(stats.stddev)
+        .bind(stats.min)
+        .bind(stats.max)
+        .bind(stats.sample_count as i64)
+        .bind(updated_at.to_rfc3339())
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn save_baseline(&self, baseline: &Baseline) -> Result<(), anyhow::Error> {
+        for (feature_name, stats) in &baseline.stats {
+            self.upsert_baseline_stats(&baseline.asset_id, feature_name, stats, baseline.updated_at).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn load_all_baselines(&self) -> Result<HashMap<String, Baseline>, anyhow::Error> {
+        let rows = sqlx::query(
+            "SELECT b.asset_id, b.feature_name, b.mean, b.stddev, b.min, b.max, b.sample_count, b.created_at, b.updated_at,
+                    COALESCE(a.asset_type, 'device') as asset_type
+             FROM baselines b
+             LEFT JOIN assets a ON b.asset_id = a.id
+             ORDER BY b.asset_id, b.feature_name"
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut map: HashMap<String, Baseline> = HashMap::new();
+        for row in rows {
+            let asset_id: String = row.get(0);
+            let feature_name: String = row.get(1);
+            let mean: f64 = row.get(2);
+            let stddev: f64 = row.get(3);
+            let min: f64 = row.get(4);
+            let max: f64 = row.get(5);
+            let sample_count: i64 = row.get(6);
+            let created_at_str: String = row.get(7);
+            let updated_at_str: String = row.get(8);
+            let asset_type_str: String = row.get(9);
+
+            let asset_type = match asset_type_str.as_str() {
+                "network" => crate::discovery::AssetType::NetworkEndpoint,
+                "process" => crate::discovery::AssetType::Process,
+                _ => crate::discovery::AssetType::Device,
+            };
+
+            let created_at = DateTime::parse_from_rfc3339(&created_at_str)?.with_timezone(&Utc);
+            let updated_at = DateTime::parse_from_rfc3339(&updated_at_str)?.with_timezone(&Utc);
+
+            let bl = map.entry(asset_id.clone()).or_insert_with(|| Baseline {
+                asset_id: asset_id.clone(),
+                asset_type,
+                created_at,
+                updated_at,
+                window_count: sample_count as u64,
+                stats: HashMap::new(),
+            });
+            bl.updated_at = updated_at;
+            bl.stats.insert(feature_name, BaselineStats {
+                mean,
+                stddev,
+                min,
+                max,
+                sample_count: sample_count as u64,
+            });
+        }
+
+        Ok(map)
+    }
+
+    pub async fn get_asset_count(&self) -> Result<i64, anyhow::Error> {
+        let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM assets")
+            .fetch_one(&self.pool)
+            .await?;
+        Ok(row.0)
+    }
+
+    pub async fn get_event_counts(&self) -> Result<EventCounts, anyhow::Error> {
+        let total_row: (i64, i64, i64) = sqlx::query_as(
+            "SELECT
+                COALESCE(SUM(CASE WHEN event_type = 'process' THEN 1 ELSE 0 END), 0) as proc,
+                COALESCE(SUM(CASE WHEN event_type = 'network' THEN 1 ELSE 0 END), 0) as net,
+                COUNT(*) as total
+             FROM events"
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        let one_hour_ago = (Utc::now() - chrono::Duration::hours(1)).to_rfc3339();
+        let hour_row: (i64, i64, i64) = sqlx::query_as(
+            "SELECT
+                COALESCE(SUM(CASE WHEN event_type = 'process' THEN 1 ELSE 0 END), 0) as proc,
+                COALESCE(SUM(CASE WHEN event_type = 'network' THEN 1 ELSE 0 END), 0) as net,
+                COUNT(*) as total
+             FROM events WHERE timestamp >= ?1"
+        )
+        .bind(&one_hour_ago)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(EventCounts {
+            process_events: total_row.0 as u64,
+            network_events: total_row.1 as u64,
+            total_events: total_row.2 as u64,
+            last_hour: EventCountBucket {
+                process: hour_row.0 as u64,
+                network: hour_row.1 as u64,
+                total: hour_row.2 as u64,
+            },
+        })
+    }
+
+    pub async fn get_events_per_hour_24h(&self) -> Result<Vec<HourlyEvents>, anyhow::Error> {
+        let since = (Utc::now() - chrono::Duration::hours(24)).to_rfc3339();
+        let rows = sqlx::query(
+            "SELECT
+                strftime('%Y-%m-%d %H:00:00', timestamp) as hour_bucket,
+                SUM(CASE WHEN event_type = 'process' THEN 1 ELSE 0 END) as proc,
+                SUM(CASE WHEN event_type = 'network' THEN 1 ELSE 0 END) as net,
+                COUNT(*) as total
+             FROM events
+             WHERE timestamp >= ?1
+             GROUP BY hour_bucket
+             ORDER BY hour_bucket ASC"
+        )
+        .bind(&since)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut result = Vec::new();
+        for row in rows {
+            let bucket_str: String = row.get(0);
+            let proc: Option<i64> = row.get(1);
+            let net: Option<i64> = row.get(2);
+            let total: Option<i64> = row.get(3);
+            result.push(HourlyEvents {
+                hour_label: bucket_str,
+                process_events: proc.unwrap_or(0) as u64,
+                network_events: net.unwrap_or(0) as u64,
+                total_events: total.unwrap_or(0) as u64,
+            });
+        }
+        Ok(result)
+    }
+
     pub async fn health_check(&self) -> Result<(), String> {
         Ok(())
     }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct EventCountBucket {
+    pub process: u64,
+    pub network: u64,
+    pub total: u64,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct EventCounts {
+    pub process_events: u64,
+    pub network_events: u64,
+    pub total_events: u64,
+    pub last_hour: EventCountBucket,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct HourlyEvents {
+    pub hour_label: String,
+    pub process_events: u64,
+    pub network_events: u64,
+    pub total_events: u64,
 }
