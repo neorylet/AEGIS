@@ -75,10 +75,10 @@ pub async fn poll_connections(db: Arc<DatabaseManager>) {
 
         for line in stdout.lines() {
             let line = line.trim();
-            
-            if line.is_empty() 
-                || line.starts_with("Active Connections") 
-                || line.starts_with("Proto") 
+
+            if line.is_empty()
+                || line.starts_with("Active Connections")
+                || line.starts_with("Proto")
                 || line.starts_with("---") {
                 continue;
             }
@@ -211,16 +211,45 @@ pub async fn run_analysis_loop(
         };
 
         if tick % persist_every_n == 0 {
-            for bl in baselines_snapshot.iter() {
-                if bl.window_count >= 2 {
-                    if let Err(e) = db.save_baseline(bl).await {
-                        error!("Failed to persist baseline {}: {}", bl.asset_id, e);
+            // DIAGNOSTIC: this replaces the old "baselines persisted" count, which
+            // only checked window_count >= 2 and therefore reported success even
+            // when baseline.stats was empty and save_baseline wrote zero rows.
+            let candidates: Vec<_> = baselines_snapshot
+                .iter()
+                .filter(|b| b.window_count >= 2)
+                .collect();
+
+            let mut baselines_written = 0usize;
+            let mut rows_written = 0usize;
+            let mut empty_stats_count = 0usize;
+
+            for bl in candidates.iter() {
+                if bl.stats.is_empty() {
+                    empty_stats_count += 1;
+                    warn!(
+                        "Baseline for asset '{}' has window_count={} but stats map is EMPTY — save_baseline will write 0 rows for it",
+                        bl.asset_id, bl.window_count
+                    );
+                    continue;
+                }
+                match db.save_baseline(bl).await {
+                    Ok(n) => {
+                        baselines_written += 1;
+                        rows_written += n;
+                    }
+                    Err(e) => {
+                        error!("Failed to persist baseline for asset '{}': {}", bl.asset_id, e);
                     }
                 }
             }
-            info!("  → {} baselines persisted to DB ({} total)",
-                baselines_snapshot.iter().filter(|b| b.window_count >= 2).count(),
-                baselines_snapshot.len()
+
+            info!(
+                "  → baselines: {} candidates (window_count>=2) out of {} total | {} had empty stats | {} actually written, {} rows total",
+                candidates.len(),
+                baselines_snapshot.len(),
+                empty_stats_count,
+                baselines_written,
+                rows_written,
             );
         }
 

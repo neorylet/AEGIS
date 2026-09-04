@@ -39,7 +39,7 @@ impl DatabaseManager {
     }
 
     async fn initialize_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-        sqlx::query(
+        match sqlx::query(
             "CREATE TABLE IF NOT EXISTS events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp TEXT NOT NULL,
@@ -50,9 +50,16 @@ impl DatabaseManager {
             )",
         )
         .execute(pool)
-        .await?;
+        .await
+        {
+            Ok(_) => info!("✅ events table ready"),
+            Err(e) => {
+                log::error!("❌ events CREATE TABLE FAILED: {:?}", e);
+                return Err(e);
+            }
+        }
 
-        sqlx::query(
+        match sqlx::query(
             "CREATE TABLE IF NOT EXISTS assets (
                 id TEXT PRIMARY KEY,
                 asset_type TEXT NOT NULL DEFAULT 'device',
@@ -64,9 +71,16 @@ impl DatabaseManager {
             )",
         )
         .execute(pool)
-        .await?;
+        .await
+        {
+            Ok(_) => info!("✅ assets table ready"),
+            Err(e) => {
+                log::error!("❌ assets CREATE TABLE FAILED: {:?}", e);
+                return Err(e);
+            }
+        }
 
-        sqlx::query(
+        match sqlx::query(
             "CREATE TABLE IF NOT EXISTS baselines (
                 asset_id TEXT NOT NULL,
                 feature_name TEXT NOT NULL,
@@ -81,7 +95,14 @@ impl DatabaseManager {
             )",
         )
         .execute(pool)
-        .await?;
+        .await
+        {
+            Ok(_) => info!("✅ baselines table ready"),
+            Err(e) => {
+                log::error!("❌ baselines CREATE TABLE FAILED: {:?}", e);
+                return Err(e);
+            }
+        }
 
         Ok(())
     }
@@ -234,11 +255,16 @@ impl DatabaseManager {
         Ok(())
     }
 
-    pub async fn save_baseline(&self, baseline: &Baseline) -> Result<(), anyhow::Error> {
+    /// Returns the number of (asset_id, feature_name) rows actually written.
+    /// If `baseline.stats` is empty, this returns Ok(0) and writes nothing —
+    /// that used to look identical to "success" in the caller's logs.
+    pub async fn save_baseline(&self, baseline: &Baseline) -> Result<usize, anyhow::Error> {
+        let mut written = 0usize;
         for (feature_name, stats) in &baseline.stats {
             self.upsert_baseline_stats(&baseline.asset_id, feature_name, stats, baseline.updated_at).await?;
+            written += 1;
         }
-        Ok(())
+        Ok(written)
     }
 
     pub async fn load_all_baselines(&self) -> Result<HashMap<String, Baseline>, anyhow::Error> {
